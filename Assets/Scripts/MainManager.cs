@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
 
 public class MainManager : MonoBehaviour
 {
@@ -12,11 +13,15 @@ public class MainManager : MonoBehaviour
 
     public Text ScoreText;
     public GameObject GameOverText;
+    public Text bestScoreText;
     
     private bool m_Started = false;
     private int m_Points;
     
     private bool m_GameOver = false;
+
+    private int highScorePoints;
+    private string highScoreName;
 
     
     // Start is called before the first frame update
@@ -36,6 +41,13 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        LoadScoreWithName();
+        if (highScoreName == null)
+        {
+            bestScoreText.text = $"Best score: : ";
+        }
+        bestScoreText.text = $"Best score: {highScoreName}: {highScorePoints}"; 
     }
 
     private void Update()
@@ -72,5 +84,41 @@ public class MainManager : MonoBehaviour
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+
+        if (m_Points > highScorePoints)
+        {
+            SavescoreWithName();
+        }
     }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public int highScorePoints;
+        public string highScoreName;
+    }
+
+    public void SavescoreWithName()
+    {
+        SaveData data = new SaveData();
+        data.highScorePoints = m_Points;
+        data.highScoreName = Transfer.Instance.playerName;
+
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    public void LoadScoreWithName()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+
+            highScorePoints = data.highScorePoints;
+            highScoreName = data.highScoreName;
+        }
+    }
+
 }
