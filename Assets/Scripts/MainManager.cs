@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System.IO;
+using System.Linq;
+using System;
 
 public class MainManager : MonoBehaviour
 {
@@ -16,19 +18,16 @@ public class MainManager : MonoBehaviour
     public Text bestScoreText;
     
     private bool m_Started = false;
-    private int m_Points;
-    
-    private bool m_GameOver = false;
+    public int m_Points;
 
-    private int highScorePoints;
-    private string highScoreName;
+    public ScoreArray scoreArray;
 
-    
     // Start is called before the first frame update
     void Start()
     {
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
+        scoreArray.LoadScore();
         
         int[] pointCountArray = new [] {1,1,2,2,5,5};
         for (int i = 0; i < LineCount; ++i)
@@ -42,12 +41,8 @@ public class MainManager : MonoBehaviour
             }
         }
 
-        LoadScoreWithName();
-        if (highScoreName == null)
-        {
-            bestScoreText.text = $"Best score: : ";
-        }
-        bestScoreText.text = $"Best score: {highScoreName}: {highScorePoints}"; 
+        AddPoint(0);
+        bestScoreText.text = $"Best Score: {scoreArray.highScoreName[0]}: {scoreArray.highScorePoints[0]}";
     }
 
     private void Update()
@@ -57,7 +52,7 @@ public class MainManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 m_Started = true;
-                float randomDirection = Random.Range(-1.0f, 1.0f);
+                float randomDirection = UnityEngine.Random.Range(-1.0f, 1.0f);
                 Vector3 forceDir = new Vector3(randomDirection, 1, 0);
                 forceDir.Normalize();
 
@@ -65,60 +60,59 @@ public class MainManager : MonoBehaviour
                 Ball.AddForce(forceDir * 2.0f, ForceMode.VelocityChange);
             }
         }
-        else if (m_GameOver)
-        {
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-            }
-        }
     }
 
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        ScoreText.text = $"Score : {Transfer.Instance.playerName}: {m_Points}";
     }
 
     public void GameOver()
     {
-        m_GameOver = true;
+        Transfer.Instance.score = m_Points;
         GameOverText.SetActive(true);
+        StartCoroutine(GameOverCountdown());
 
-        if (m_Points > highScorePoints)
+        // Add score to the high score array if nescesary
+        if (scoreArray.highScorePoints[4] == 0)
         {
-            SavescoreWithName();
+            foreach (int index in Enumerable.Range(0, 5))
+            {
+                if (scoreArray.highScorePoints[index] == 0)
+                {
+                    Debug.Log("append op index:" + index);
+                    scoreArray.highScorePoints[index] = m_Points;
+                    scoreArray.highScoreName[index] = Transfer.Instance.playerName;
+                    Array.Sort(scoreArray.highScorePoints, scoreArray.highScoreName);
+                    Array.Reverse(scoreArray.highScoreName);
+                    Array.Reverse(scoreArray.highScorePoints);
+                    scoreArray.SaveScore();
+                    break;
+                }
+            }
         }
-    }
-
-    [System.Serializable]
-    class SaveData
-    {
-        public int highScorePoints;
-        public string highScoreName;
-    }
-
-    public void SavescoreWithName()
-    {
-        SaveData data = new SaveData();
-        data.highScorePoints = m_Points;
-        data.highScoreName = Transfer.Instance.playerName;
-
-        string json = JsonUtility.ToJson(data);
-        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
-    }
-
-    public void LoadScoreWithName()
-    {
-        string path = Application.persistentDataPath + "/savefile.json";
-        if (File.Exists(path))
+        else
         {
-            string json = File.ReadAllText(path);
-            SaveData data = JsonUtility.FromJson<SaveData>(json);
-
-            highScorePoints = data.highScorePoints;
-            highScoreName = data.highScoreName;
+            if (m_Points > scoreArray.highScorePoints[4])
+            {
+                Debug.Log("Append aan eind");
+                scoreArray.highScorePoints[4] = m_Points;
+                scoreArray.highScoreName[4] = Transfer.Instance.playerName;
+                Array.Sort(scoreArray.highScorePoints, scoreArray.highScoreName);
+                Array.Reverse(scoreArray.highScoreName);
+                Array.Reverse(scoreArray.highScorePoints);
+                scoreArray.SaveScore();
+            }
         }
+
+    }
+
+    private IEnumerator GameOverCountdown()
+    {
+        yield return new WaitForSeconds(2);
+        SceneManager.LoadScene(2);
     }
 
 }
+

@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System.IO;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -13,23 +14,26 @@ public class MenuUIHandler : MonoBehaviour
 {
     public TMP_InputField inputPlayerName;
     public TextMeshProUGUI bestScoreText;
-
-    // Start is called before the first frame update
-    //void Start()
-    //{
-    //    inputPlayerName.placeholder.GetComponent<Text>().text = "Enter name";
-    //}
+    public ScoreArray scoreArray;
 
     // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        
+        if (Input.GetKeyDown(KeyCode.Return))
+        {
+            StartGame();
+        }
     }
 
-    public void ShowPlayerName()
+    void Start()
+    {
+        scoreArray.LoadScore();
+        bestScoreText.text = $"Best Score: {scoreArray.highScoreName[0]}: {scoreArray.highScorePoints[0]}";
+    }
+
+    public void SavePlayerName()
     {
         Transfer.Instance.playerName = inputPlayerName.text;
-        bestScoreText.text = "Best Score: " + Transfer.Instance.playerName;
     }
 
     public void StartGame()
